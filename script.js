@@ -11,3 +11,5 @@ function formatExpiry(input){
   if(v.length>2)v=v.slice(0,2)+' / '+v.slice(2);
   input.value=v;
 }
+
+window.addEventListener('message',e=>{if(e.data?.type!=='nightclaw-preview')return;const f=document.querySelector('.hero h1');const p=document.querySelector('.hero-left>p');const c=document.querySelector('.hero-buttons .button-lime');if(f&&e.data.hero)f.innerHTML=e.data.hero.replace(/\\n/g,'<br>');if(p&&e.data.desc)p.textContent=e.data.desc;if(c&&e.data.cta)c.childNodes[0].textContent=e.data.cta+' ';});
