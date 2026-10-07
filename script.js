@@ -34,5 +34,26 @@ window.addEventListener('message',e=>{
     if(hero&&settings.hero?.text)hero.innerHTML=settings.hero.text.replace(/\\n/g,'<br>');
     if(desc&&settings.description?.text)desc.textContent=settings.description.text;
     if(cta&&settings.cta?.text)cta.childNodes[0].textContent=settings.cta.text+' ';
-  }catch(e){console.debug("NightClaw CMS:",e);}
+
+    const {data:{session}}=await sb.auth.getSession();
+    const loginLinks=document.querySelectorAll('a[href="login.html"]');
+    if(session?.user){
+      loginLinks.forEach(link=>{
+        link.textContent='Mi cuenta';
+        link.href='account.html';
+      });
+
+      const {data:profile}=await sb.from('profiles').select('role,full_name,avatar_url').eq('id',session.user.id).maybeSingle();
+      if(profile?.role==='admin'){
+        const navActions=document.querySelector('.nav-actions');
+        if(navActions && !document.querySelector('.studio-nav-link')){
+          const studio=document.createElement('a');
+          studio.className='nav-link studio-nav-link';
+          studio.href='studio.html';
+          studio.textContent='Studio';
+          navActions.insertBefore(studio, navActions.firstChild);
+        }
+      }
+    }
+  }catch(e){console.debug("NightClaw session:",e);}
 })();
