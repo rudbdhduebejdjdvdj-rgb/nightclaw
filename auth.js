@@ -73,19 +73,6 @@
 
   form?.addEventListener("submit", authenticate);
 
-  document.querySelectorAll(".oauth").forEach(button => {
-    button.addEventListener("click", async () => {
-      if (!sb) return showMessage("No se ha podido cargar Supabase.", true);
-      const provider = button.dataset.provider;
-      showMessage(`Conectando con ${provider === "apple" ? "Apple" : "Google"}…`);
-      const { error } = await sb.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: location.origin + "/login.html" }
-      });
-      if (error) showMessage(error.message, true);
-    });
-  });
-
   document.querySelector(".forgot")?.addEventListener("click", async event => {
     event.preventDefault();
     if (!sb) return showMessage("No se ha podido cargar Supabase.", true);
