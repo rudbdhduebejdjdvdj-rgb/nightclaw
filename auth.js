@@ -1,0 +1,3 @@
+const message=document.getElementById('authMessage');
+document.querySelectorAll('.oauth').forEach(btn=>btn.addEventListener('click',()=>{message.textContent='OAuth preparado. Para activarlo de verdad hay que conectar el proveedor de identidad en el backend de NightClaw.';}));
+document.getElementById('loginForm')?.addEventListener('submit',e=>{e.preventDefault();message.textContent='El formulario está listo para conectarse al sistema de autenticación. No guardamos contraseñas en esta web estática.';});
