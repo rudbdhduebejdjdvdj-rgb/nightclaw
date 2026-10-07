@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="NightClaw — Instagram landing">
+<meta name="theme-color" content="#090909">
+<title>NIGHTCLAW · Instagram</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#080808;color:#fff}
+.bg{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:0}
+.shade{position:fixed;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(0,0,0,.48))}
+.brand{position:absolute;z-index:2;top:8%;left:50%;transform:translateX(-50%);font-size:clamp(22px,3vw,40px);font-weight:600;letter-spacing:.42em;text-shadow:0 4px 25px #000;white-space:nowrap}
+.menu{position:absolute;z-index:2;top:64%;left:50%;transform:translate(-50%,-50%);width:min(430px,82vw);display:flex;flex-direction:column;gap:15px}
+.menu a{display:block;text-decoration:none;text-align:center;border:1px solid rgba(255,255,255,.42);border-radius:14px;padding:18px 24px;background:rgba(8,8,12,.38);color:#fff;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-size:16px;font-weight:500;transition:.25s;box-shadow:0 12px 35px rgba(0,0,0,.28)}
+.menu a:hover{transform:translateY(-3px);background:rgba(255,255,255,.15);border-color:#fff}
+.note{position:absolute;z-index:2;bottom:5%;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.7;white-space:nowrap}
+@media(max-width:600px){.brand{top:7%}.menu{width:82vw;top:63%}.note{white-space:normal;text-align:center;width:90%;line-height:1.5}}
+</style>
+</head>
+<body>
+<img class="bg" src="https://images.pexels.com/photos/35729663/pexels-photo-35729663.jpeg?cs=srgb&dl=pexels-freestockpro-35729663.jpg&fm=jpg" alt="Madrid skyline">
+<div class="shade"></div>
+<div class="brand">NIGHTCLAW</div>
+<nav class="menu" aria-label="Menú de NightClaw">
+  <a href="../about.html">Quién es Nightclaw</a>
+  <a href="../index.html#shop">Tienda</a>
+  <a href="../service-web.html">Diseño web y servicios</a>
+</nav>
+<div class="note">Instagram edition · NightClaw</div>
+</body>
+</html>
