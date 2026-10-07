@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi cuenta · NightClaw</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="grain"></div>
+<header class="site-nav">
+  <a class="logo" href="index.html"><span>THE</span>NIGHTCLAW</a>
+  <div class="nav-actions"><a class="nav-link" href="index.html">Volver al inicio</a><button id="logout" class="nav-link" type="button">Cerrar sesión</button></div>
+</header>
+<main class="section" style="min-height:70vh">
+  <span class="eyebrow">ACCOUNT / 01</span>
+  <h1>Mi <em>cuenta.</em></h1>
+  <p id="accountStatus">Cargando tu cuenta...</p>
+  <div id="accountCard" class="featured-product" style="margin-top:32px;display:none">
+    <div class="featured-copy">
+      <div class="product-meta"><span>PROFILE</span><span>NIGHTCLAW</span></div>
+      <h3 id="accountName">NightClaw User</h3>
+      <p id="accountEmail"></p>
+      <p id="accountRole"></p>
+    </div>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="supabase-client.js"></script>
+<script>
+(async function(){
+ const sb=window.ncSupabase;
+ if(!sb)return;
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){location.replace('login.html');return;}
+ const status=document.getElementById('accountStatus'), card=document.getElementById('accountCard');
+ const {data:p}=await sb.from('profiles').select('full_name,role').eq('id',session.user.id).maybeSingle();
+ document.getElementById('accountEmail').textContent=session.user.email||'';
+ document.getElementById('accountName').textContent=p?.full_name||'Usuario NightClaw';
+ document.getElementById('accountRole').textContent=p?.role==='admin'?'Administrador':'Usuario';
+ status.textContent='Sesión iniciada correctamente.';
+ card.style.display='flex';
+ document.getElementById('logout').onclick=async()=>{await sb.auth.signOut();location.replace('login.html');};
+})();
+</script>
+</body></html>
