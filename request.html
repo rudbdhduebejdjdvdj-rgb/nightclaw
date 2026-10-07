@@ -1,6 +1,37 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Solicita un proyecto personalizado a NightClaw."><title>Crear proyecto — NightClaw</title><link rel="stylesheet" href="style.css"></head>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Solicita un proyecto personalizado a NightClaw."><title>Crear proyecto — NightClaw</title><link rel="stylesheet" href="style.css"></head>
 <body><div class="grain"></div><header class="site-nav"><a class="logo" href="index.html"><span>THE</span>NIGHTCLAW</a><nav class="desktop-nav"><a href="index.html#shop">Tienda</a><a href="index.html#projects">Proyectos</a><a href="index.html#services">Servicios</a><a href="about.html">Quién es NightClaw</a></nav><div class="nav-actions"><a class="nav-pill" href="index.html">Volver <b>↩</b></a></div></header>
 <main><section class="section"><span class="eyebrow">PROJECT REQUEST / 2026</span><h1 style="font-size:clamp(60px,9vw,120px);line-height:.84;letter-spacing:-6px;margin:25px 0 35px">CUÉNTANOS<br><em style="color:var(--lime);font-style:normal">TU IDEA.</em></h1><p style="max-width:700px;color:var(--muted);font-size:18px;line-height:1.7">Web, automatización, bot, herramienta, producto digital o una idea que todavía no sabes cómo construir. Cuéntanos qué quieres conseguir y NightClaw estudiará el proyecto.</p>
-<div style="max-width:760px;margin-top:55px;border:1px solid var(--line);padding:35px;background:var(--surface)"><form action="mailto:hectorjm.20@icloud.com" method="post" enctype="text/plain"><label>TIPO DE PROYECTO<select name="tipo" style="background:#09090c;color:#fff;border:1px solid #34343a;padding:13px;font:12px 'Space Grotesk'"><option>Web / Landing page</option><option>Automatización</option><option>Bot</option><option>Producto digital</option><option>IA</option><option>Otro</option></select></label><label>NOMBRE<input name="nombre" placeholder="Cómo quieres que te llamemos"></label><label>DESCRIBE TU IDEA<textarea name="idea" rows="7" placeholder="Qué quieres construir, qué problema resuelve y qué necesitas..." style="background:#09090c;color:#fff;border:1px solid #34343a;padding:13px;font:12px 'Space Grotesk';resize:vertical"></textarea></label><label>PRESUPUESTO ORIENTATIVO<input name="presupuesto" placeholder="Ej. 50 €, 100 €, 300 €..."></label><button class="button button-lime checkout-button" type="submit">Enviar proyecto ↗</button></form></div></section></main>
-<footer><a class="logo" href="index.html"><span>THE</span>NIGHTCLAW</a><span>© 2026 NightClaw</span><a href="about.html">Quién es NightClaw</a></footer></body></html>
+<div style="max-width:760px;margin-top:55px;border:1px solid var(--line);padding:35px;background:var(--surface)"><form id="projectForm">
+<label>TIPO DE PROYECTO<select id="type" style="background:#09090c;color:#fff;border:1px solid #34343a;padding:13px;font:12px 'Space Grotesk'"><option>Web / Landing page</option><option>Automatización</option><option>Bot</option><option>Producto digital</option><option>IA</option><option>Otro</option></select></label>
+<label>NOMBRE<input id="name" required placeholder="Cómo quieres que te llamemos"></label>
+<label>EMAIL<input id="email" type="email" required placeholder="tu@email.com"></label>
+<label>DESCRIBE TU IDEA<textarea id="idea" required rows="7" placeholder="Qué quieres construir, qué problema resuelve y qué necesitas..." style="background:#09090c;color:#fff;border:1px solid #34343a;padding:13px;font:12px 'Space Grotesk';resize:vertical"></textarea></label>
+<label>PRESUPUESTO ORIENTATIVO<input id="budget" placeholder="Ej. 50 €, 100 €, 300 €..."></label>
+<button class="button button-lime checkout-button" type="submit">Enviar proyecto ↗</button><p id="requestStatus" class="auth-message"></p>
+</form></div></section></main>
+<footer><a class="logo" href="index.html"><span>THE</span>NIGHTCLAW</a><span>© 2026 NightClaw</span><a href="about.html">Quién es NightClaw</a></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="supabase-client.js"></script><script src="analytics.js"></script>
+<script>
+const form=document.getElementById("projectForm"), status=document.getElementById("requestStatus");
+form.addEventListener("submit",async e=>{
+ e.preventDefault();
+ const sb=window.ncSupabase;
+ if(!sb){status.textContent="No se ha podido cargar el sistema.";return;}
+ const {data:{user}}=await sb.auth.getUser();
+ const {error}=await sb.from("project_requests").insert({
+  user_id:user?.id||null,
+  name:document.getElementById("name").value.trim(),
+  email:document.getElementById("email").value.trim(),
+  project_type:document.getElementById("type").value,
+  description:document.getElementById("idea").value.trim(),
+  budget:document.getElementById("budget").value.trim(),
+  status:"new"
+ });
+ if(error){status.textContent=error.message;return;}
+ window.NightClawAnalytics?.track("project_request");
+ status.textContent="Solicitud enviada. Te contactaremos con los siguientes pasos.";
+ form.reset();
+});
+</script></body></html>
