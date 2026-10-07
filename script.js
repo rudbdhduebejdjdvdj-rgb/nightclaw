@@ -12,4 +12,27 @@ function formatExpiry(input){
   input.value=v;
 }
 
-window.addEventListener('message',e=>{if(e.data?.type!=='nightclaw-preview')return;const f=document.querySelector('.hero h1');const p=document.querySelector('.hero-left>p');const c=document.querySelector('.hero-buttons .button-lime');if(f&&e.data.hero)f.innerHTML=e.data.hero.replace(/\\n/g,'<br>');if(p&&e.data.desc)p.textContent=e.data.desc;if(c&&e.data.cta)c.childNodes[0].textContent=e.data.cta+' ';});
+window.addEventListener('message',e=>{
+  if(e.data?.type!=='nightclaw-preview')return;
+  const f=document.querySelector('.hero h1');
+  const p=document.querySelector('.hero-left>p');
+  const c=document.querySelector('.hero-buttons .button-lime');
+  if(f&&e.data.hero)f.innerHTML=e.data.hero.replace(/\\n/g,'<br>');
+  if(p&&e.data.desc)p.textContent=e.data.desc;
+  if(c&&e.data.cta)c.childNodes[0].textContent=e.data.cta+' ';
+});
+
+(async function(){
+  const sb=window.ncSupabase;
+  if(!sb)return;
+  try{
+    const {data}=await sb.from("site_settings").select("key,value");
+    const settings=Object.fromEntries((data||[]).map(x=>[x.key,x.value]));
+    const hero=document.querySelector('.hero h1');
+    const desc=document.querySelector('.hero-left>p');
+    const cta=document.querySelector('.hero-buttons .button-lime');
+    if(hero&&settings.hero?.text)hero.innerHTML=settings.hero.text.replace(/\\n/g,'<br>');
+    if(desc&&settings.description?.text)desc.textContent=settings.description.text;
+    if(cta&&settings.cta?.text)cta.childNodes[0].textContent=settings.cta.text+' ';
+  }catch(e){console.debug("NightClaw CMS:",e);}
+})();
