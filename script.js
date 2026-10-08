@@ -57,3 +57,5 @@ window.addEventListener('message',e=>{
     }
   }catch(e){console.debug("NightClaw session:",e);}
 })();
+
+(function(){const btn=document.querySelector('.menu-btn'),nav=document.querySelector('.desktop-nav');if(!btn||!nav)return;btn.addEventListener('click',()=>{nav.classList.toggle('mobile-open');btn.setAttribute('aria-expanded',nav.classList.contains('mobile-open'));});nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>nav.classList.remove('mobile-open')));})();
