@@ -1,18 +1,15 @@
-# TheNightClaw
+# ZENVORAES — Tienda digital
 
-Web oficial de TheNightClaw.
+Web oficial de ZENVORAES, centrada exclusivamente en los tres productos digitales enlazados a Gumroad.
 
-## IMPORTANTE
-Todos los archivos están deliberadamente en la raíz del repositorio.
-No hace falta crear ni subir carpetas.
+## Publicación
+GitHub Pages: Settings → Pages → Deploy from a branch → main → / (root).
 
-## GitHub Pages
-Settings → Pages → Deploy from a branch → main → / (root)
+## Productos
+- https://zenvoraes.gumroad.com/l/rfrfgefef
+- https://zenvoraes.gumroad.com/l/edde
+- https://zenvoraes.gumroad.com/l/dlsjz
 
-## Antes de publicar
-- Cambiar precios `€X,XX` / `€XX,XX`.
-- Sustituir los enlaces `href="#"` de compra por los enlaces reales de Stripe.
-- Cambiar `contact@thenightclaw.com` por el email real.
-- Si el PDF se vende, no conviene dejarlo como descarga pública directa.
+Los botones de compra abren la ficha de cada producto en Gumroad. El precio y los detalles se consultan allí.
 
-© 2026 TheNightClaw. Todos los derechos reservados.
+© 2026 ZENVORAES.
