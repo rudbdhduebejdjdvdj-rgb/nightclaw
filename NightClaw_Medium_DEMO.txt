@@ -1,9 +1,0 @@
-THE NIGHTCLAW — MEDIUM PROMPT PACK
-DEMO PRODUCT
-
-Esta es una versión de demostración del producto. Sustituye este archivo por la edición comercial final antes de venderlo.
-
-PROMPT DEMO 01
-Analiza [TAREA] teniendo en cuenta contexto, restricciones y resultado esperado. Devuelve diagnóstico, opciones y recomendación.
-
-© 2026 TheNightClaw
