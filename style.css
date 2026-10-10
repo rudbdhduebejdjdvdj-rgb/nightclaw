@@ -14,3 +14,7 @@
 
 /* Portadas reales subidas al repositorio */
 .product-art:has(.product-cover)>:not(.product-cover){display:none}.product-art .product-cover{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:inherit;z-index:1}.product-art:has(.product-cover){background:#f5eaf2}
+
+
+/* ZENVORAES paid advertising entry point */
+.ad-top-slot{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:10px 20px;background:linear-gradient(90deg,#fff0e8,#f2edff,#eaf5ff);border-bottom:1px solid #eadfe9;color:#51475b;font-size:12px;text-align:center}.ad-top-label{font-size:9px;letter-spacing:.12em;font-weight:800;border:1px solid #cfc1dc;border-radius:999px;padding:4px 7px}.ad-top-copy{font-weight:500}.ad-top-slot>a{font-weight:800;color:#57416d;text-decoration:none;border-bottom:1px solid #bca6ce;padding-bottom:2px}.ad-top-slot>a span{margin-left:4px}@media(max-width:600px){.ad-top-slot{gap:7px;padding:10px 12px}.ad-top-copy{flex-basis:100%;order:2}.ad-top-slot>a{order:3}}
