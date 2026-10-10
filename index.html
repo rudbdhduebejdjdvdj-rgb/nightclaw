@@ -19,6 +19,7 @@
 <header class="header">
   <a class="brand" href="#" aria-label="ZENVORAES inicio"><span class="brand-mark">z</span> zenvoraes</a>
   <nav aria-label="Navegación principal"><a href="#productos">Tienda</a><a href="#beneficios">Por qué te gustará</a><a href="#preguntas">Ayuda</a></nav>
+  <a class="header-search" href="#product-search" aria-label="Buscar productos"><span aria-hidden="true">⌕</span> Buscar</a>
   <a class="cart-link" href="#productos">Descubrir productos <span>↗</span></a>
 </header>
 <main>
@@ -129,6 +130,7 @@
     chips.forEach(item => { const active = item === chip; item.classList.toggle('active',active); item.setAttribute('aria-pressed',String(active)); });
     update();
   }));
+  document.querySelector('.header-search')?.addEventListener('click', () => { window.setTimeout(() => search.focus(), 350); });
   search.addEventListener('input', update);
   sort.addEventListener('change', update);
   document.getElementById('clear-search').addEventListener('click', () => {
