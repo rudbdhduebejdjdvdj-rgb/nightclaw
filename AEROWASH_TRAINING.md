@@ -66,3 +66,20 @@ El modelo se guarda en `~/AeroWashVision/models/aerowash_edges.pt`. El script us
 ## Importante
 
 El entrenamiento aún no se ejecuta automáticamente al abrir la cámara. Debes recopilar y revisar imágenes/máscaras primero. Este modelo detecta bordes; no reconoce suciedad ni certifica que sea seguro usarlo para controlar un dron. Valídalo con imágenes independientes antes de cualquier uso operativo.
+
+
+## 5. Conector de ChatGPT y mapa de bordes
+
+El puente local sube las imágenes RAW y procesada a Render cada **29 minutos** por defecto (1740 segundos). Para cambiarlo explícitamente antes de ejecutar el puente:
+
+```bash
+export AEROWASH_UPLOAD_INTERVAL=1740
+python local_bridge.py
+```
+
+El servidor conserva las imágenes hasta 30 minutos antes de considerarlas antiguas. Cuando el conector MCP esté actualizado y disponible en ChatGPT:
+1. Llama a `get_latest_raw_frame` para que el asistente reciba y pueda inspeccionar visualmente la imagen real.
+2. Llama a `get_latest_edge_overlay` para devolver la imagen con los bordes resaltados en morado.
+3. Llama a `process_latest_edges` para guardar además una máscara binaria PNG y obtener el porcentaje de píxeles de borde.
+
+La detección actual del mapa de bordes usa OpenCV (contraste local + Canny multiescala), no una red neuronal. El asistente puede inspeccionar la imagen devuelta y ayudar a interpretar o corregir el mapa, pero no se envía una imagen al chat automáticamente: hay que llamar a la herramienta MCP. Después de desplegar los cambios, actualiza o vuelve a conectar el conector para que aparezcan las herramientas nuevas.
