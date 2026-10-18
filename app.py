@@ -96,7 +96,7 @@ async def healthz(request):
 async def protected_resource_metadata(request):
     return JSONResponse({
         "resource": RESOURCE_URL,
-        "authorization_servers": [AUTH0_ISSUER.rstrip("/")],
+        "authorization_servers": [AUTH0_ISSUER],
         "scopes_supported": [],
         "bearer_methods_supported": ["header"],
     })
