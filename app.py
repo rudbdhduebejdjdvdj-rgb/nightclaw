@@ -47,8 +47,8 @@ def load_image(path):
     if not path.exists():
         raise ValueError("No frame uploaded yet. Start the local AeroWash bridge.")
     age = image_age(path)
-    if age is not None and age > 240:
-        raise ValueError(f"Last frame is {age} seconds old; check the local bridge (expected upload interval is up to 180 seconds).")
+    if age is not None and age > 1800:
+        raise ValueError(f"Last frame is {age} seconds old; check the local bridge (expected upload interval is 29 minutes (1740 seconds)).")
     data = path.read_bytes()
     if not data:
         raise ValueError("Frame file is empty.")
@@ -56,12 +56,12 @@ def load_image(path):
 
 @mcp.tool()
 def aerowash_status() -> dict:
-    """Check whether AeroWash Vision frames have arrived within the last four minutes."""
+    """Check whether AeroWash Vision frames have arrived within the last 30 minutes."""
     age = image_age(PROCESSED)
-    return {"project":"AeroWash Vision", "recent_frame": age is not None and age <= 240,
+    return {"project":"AeroWash Vision", "recent_frame": age is not None and age <= 1800,
             "seconds_since_last_frame":age, "processed_frame_exists":PROCESSED.exists(),
             "raw_frame_exists":RAW.exists(),
-            "note":"Image uploads are expected every three minutes; this connector does not push images into a ChatGPT conversation automatically."}
+            "note":"Image uploads are expected every 29 minutes; when the assistant calls get_latest_raw_frame it can visually inspect the actual image, and get_latest_edge_overlay/process_latest_edges can generate an edge map. Images are not pushed into a ChatGPT conversation automatically."}
 
 @mcp.tool()
 def get_latest_frame() -> Image:
