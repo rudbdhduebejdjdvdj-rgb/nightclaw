@@ -35,8 +35,8 @@ def register_training_tools(mcp, data_dir: Path, raw_path: Path):
         if not raw_path.exists():
             raise ValueError("No raw frame uploaded yet. Start the local AeroWash bridge.")
         age = time.time() - raw_path.stat().st_mtime
-        if age > 240:
-            raise ValueError(f"Raw frame is stale ({age:.1f}s); check the local bridge.")
+        if age > 1800:
+            raise ValueError(f"Raw frame is stale ({age:.1f}s); check the local bridge (29-minute upload interval).")
         frame = cv2.imread(str(raw_path))
         if frame is None:
             raise ValueError("Could not decode latest raw frame.")
@@ -107,8 +107,8 @@ def register_training_tools(mcp, data_dir: Path, raw_path: Path):
         if not raw_path.exists():
             raise ValueError("No raw frame available; start the local camera bridge first.")
         age = time.time() - raw_path.stat().st_mtime
-        if age > 30:
-            raise ValueError(f"Raw frame is stale ({age:.1f}s). Start the camera bridge and retry.")
+        if age > 1800:
+            raise ValueError(f"Raw frame is stale ({age:.1f}s). Start the camera bridge and retry (29-minute upload interval).")
         frame = cv2.imread(str(raw_path))
         if frame is None:
             raise ValueError("Could not decode latest raw frame.")
