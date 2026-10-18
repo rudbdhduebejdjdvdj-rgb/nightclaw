@@ -6,6 +6,7 @@ Run: python3 camera_dashboard.py
 import json
 import os
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -20,6 +21,7 @@ PROCESSED = Path(os.environ.get("AEROWASH_FRAME_PATH", str(FRAME_DIR / "latest.j
 HOST = os.environ.get("AEROWASH_UI_HOST", "127.0.0.1")
 PORT = int(os.environ.get("AEROWASH_UI_PORT", "8765"))
 LOCK = threading.Lock()
+CACHE = {}
 SETTINGS = {"zoom": 1.0, "sensitivity": 2, "purple": True, "source": "raw"}
 
 HTML = r"""<!doctype html>
@@ -38,7 +40,7 @@ h1{font-size:17px;margin:0}small,.muted{color:var(--muted)}.status{color:#a3e635
 <main class="layout"><section class="card"><div class="cardhead"><b id="viewtitle">Vista de cámara · RAW</b><span class="pill" id="resolution">Esperando imagen</span></div>
 <div class="view"><img id="feed" alt="Vista de cámara AeroWash"><div class="overlay">AEROWASH VISION<br><span id="overlaytext">Procesando bordes…</span></div></div>
 <div class="metrics"><div class="metric"><b id="edgepct">—</b><span>Píxeles de borde</span></div><div class="metric"><b id="fps">3 s</b><span>Actualización</span></div><div class="metric"><b id="zoommetric">1.0×</b><span>Zoom digital</span></div></div>
-<div class="footer">La vista se refresca cada 3 segundos. El zoom digital amplía una zona de la imagen; no sustituye un objetivo óptico ni recupera detalle que la cámara no capturó.</div></section>
+<div class="footer">La vista se refresca cada 0,7 segundos cuando el procesamiento lo permite. El zoom digital amplía una zona de la imagen; no sustituye un objetivo óptico ni recupera detalle que la cámara no capturó.</div></section>
 <aside class="card"><div class="cardhead"><b>Controles de imagen</b><span class="pill">EN DIRECTO</span></div><div class="controls">
 <div class="control"><div class="labelrow"><label for="source">Fuente</label></div><select id="source"><option value="raw">RAW · cámara original</option><option value="processed">FRAME · procesada</option></select></div>
 <div class="control"><div class="labelrow"><label for="zoom">Zoom digital</label><span class="value" id="zoomval">1.0×</span></div><input id="zoom" type="range" min="1" max="4" step=".1" value="1"><div class="labelrow hint"><span>Encuadre completo</span><span>4× ampliación</span></div></div>
@@ -49,11 +51,11 @@ h1{font-size:17px;margin:0}small,.muted{color:var(--muted)}.status{color:#a3e635
 <div class="hint"><b>Para detectar objetos más lejanos:</b> mejora la iluminación, usa una resolución mayor y acerca el sensor si es posible. La sensibilidad aumenta la detección de bordes de bajo contraste, pero no crea información que falte en la imagen.</div>
 </div></aside></main>
 <script>
-const $=id=>document.getElementById(id);let timer=null;
+const $=id=>document.getElementById(id);let timer=null;let busy=false;let lastUrl=null;
 function read(){return {zoom:+$('zoom').value,sensitivity:+$('sensitivity').value,purple:$('purple').value==='true',source:$('source').value}}
 function updateLabels(){$('zoomval').textContent=Number($('zoom').value).toFixed(1)+'×';$('zoommetric').textContent=Number($('zoom').value).toFixed(1)+'×';$('sensval').textContent=['','Muy alta','Alta','Media','Baja'][+$('sensitivity').value]}
-async function refresh(){try{const s=read();const r=await fetch('/frame.jpg?'+new URLSearchParams(s)+'&t='+Date.now());if(!r.ok)throw Error(await r.text());const blob=await r.blob();$('feed').src=URL.createObjectURL(blob);const m=await fetch('/status').then(x=>x.json());$('status').textContent=m.ok?'● Cámara conectada':'● Esperando cámara';$('resolution').textContent=m.width?m.width+' × '+m.height:'Esperando imagen';$('edgepct').textContent=m.edge_percent+'%';$('overlaytext').textContent='Bordes: '+m.edge_percent+'%';$('message').textContent=m.file+' · '+m.age+' s desde actualización';$('viewtitle').textContent='Vista de cámara · '+s.source.toUpperCase()}catch(e){$('status').textContent='● Sin imagen';$('message').textContent=e.message}}
-$('zoom').oninput=updateLabels;$('sensitivity').oninput=updateLabels;$('apply').onclick=refresh;$('source').onchange=refresh;$('purple').onchange=refresh;$('reset').onclick=()=>{$('zoom').value=1;$('sensitivity').value=2;$('purple').value='true';$('source').value='raw';updateLabels();refresh()};$('snapshot').onclick=async()=>{try{const s=read();const r=await fetch('/snapshot?'+new URLSearchParams(s),{method:'POST'});const j=await r.json();$('message').textContent=j.ok?'Guardado: '+j.path:j.error}catch(e){$('message').textContent=e.message}};updateLabels();refresh();timer=setInterval(refresh,3000);
+async function refresh(){if(busy)return;busy=true;try{const s=read();const r=await fetch('/frame.jpg?'+new URLSearchParams(s),{cache:'no-store'});if(!r.ok)throw Error(await r.text());const blob=await r.blob();const nextUrl=URL.createObjectURL(blob);$('feed').src=nextUrl;if(lastUrl)URL.revokeObjectURL(lastUrl);lastUrl=nextUrl;const m=await fetch('/status?source='+s.source,{cache:'no-store'}).then(x=>x.json());$('status').textContent=m.ok?'● Cámara conectada':'● Esperando cámara';$('resolution').textContent=m.width?m.width+' × '+m.height:'Esperando imagen';$('edgepct').textContent='Activo';$('overlaytext').textContent='Bordes morados activos';$('message').textContent=m.file+' · '+m.age+' s desde actualización';$('viewtitle').textContent='Vista de cámara · '+s.source.toUpperCase()}catch(e){$('status').textContent='● Sin imagen';$('message').textContent=e.message}finally{busy=false}}
+$('zoom').oninput=updateLabels;$('sensitivity').oninput=updateLabels;$('apply').onclick=refresh;$('source').onchange=refresh;$('purple').onchange=refresh;$('reset').onclick=()=>{$('zoom').value=1;$('sensitivity').value=2;$('purple').value='true';$('source').value='raw';updateLabels();refresh()};$('snapshot').onclick=async()=>{try{const s=read();const r=await fetch('/snapshot?'+new URLSearchParams(s),{method:'POST'});const j=await r.json();$('message').textContent=j.ok?'Guardado: '+j.path:j.error}catch(e){$('message').textContent=e.message}};updateLabels();refresh();timer=setInterval(refresh,700);
 </script></body></html>"""
 
 def build_frame(query):
@@ -109,14 +111,16 @@ class Handler(BaseHTTPRequestHandler):
             body = HTML.encode()
             self.send_response(200); self.send_header("Content-Type","text/html; charset=utf-8"); self.send_header("Content-Length",str(len(body))); self.end_headers(); self.wfile.write(body); return
         if parsed.path == "/status":
-            path = RAW if SETTINGS["source"] == "raw" else PROCESSED
-            frame = cv2.imread(str(path)) if path.exists() else None
-            age = round(__import__("time").time()-path.stat().st_mtime,1) if path.exists() else None
-            if frame is None: data={"ok":False,"width":None,"height":None,"age":age,"file":path.name,"edge_percent":"—"}
+            source = parse_qs(parsed.query).get("source", ["raw"])[0]
+            path = PROCESSED if source == "processed" else RAW
+            frame = cv2.imread(str(path), cv2.IMREAD_REDUCED_COLOR_2) if path.exists() else None
+            age = round(time.time() - path.stat().st_mtime, 1) if path.exists() else None
+            if frame is None:
+                data = {"ok": False, "width": None, "height": None, "age": age, "file": path.name, "edge_percent": "—"}
             else:
-                _, mask, (w,h), name = build_frame(parse_qs("source="+SETTINGS["source"]+"&zoom=1&sensitivity=2&purple=true"))
-                data={"ok":True,"width":w,"height":h,"age":age,"file":name,"edge_percent":round(float(np.count_nonzero(mask))*100/mask.size,2)}
-            body=json.dumps(data).encode(); self.send_response(200); self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(body))); self.end_headers(); self.wfile.write(body); return
+                data = {"ok": True, "width": int(frame.shape[1]), "height": int(frame.shape[0]), "age": age, "file": path.name, "edge_percent": "—"}
+            body = json.dumps(data).encode()
+            self.send_response(200); self.send_header("Content-Type", "application/json"); self.send_header("Cache-Control", "no-store"); self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body); return
         if parsed.path == "/frame.jpg":
             try:
                 data, mask, dims, name=build_frame(parse_qs(parsed.query))
