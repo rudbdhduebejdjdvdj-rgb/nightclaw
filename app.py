@@ -18,6 +18,7 @@ from starlette.requests import Request
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.utilities.types import Image
 from mcp.server.transport_security import TransportSecuritySettings
+from training_tools import register_training_tools
 
 DATA_DIR = Path(os.environ.get("AEROWASH_DATA_DIR", "/tmp/aerowash-frames"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -89,6 +90,8 @@ def analyze_latest_frame() -> dict:
             "edge_pixel_percent":round(float(np.count_nonzero(edges))*100/edges.size,2),
             "seconds_since_last_frame":image_age(PROCESSED),
             "warning":"These metrics do not detect dirt; that requires a trained and validated model."}
+
+register_training_tools(mcp, DATA_DIR, RAW)
 
 async def healthz(request):
     return JSONResponse({"ok": True, "service": "aerowash-mcp"})
