@@ -21,6 +21,41 @@ def register_training_tools(mcp, data_dir: Path, raw_path: Path):
         folder.mkdir(parents=True, exist_ok=True)
 
     @mcp.tool()
+    def get_edge_instruction() -> dict:
+        """Return the exact vision instruction to apply to the newest raw AeroWash frame."""
+        return {
+            "prompt": "delinea todos los bordes por minimo q sean de todos los objetos y pintalos de morado intenso",
+            "input_image_tool": "get_latest_raw_frame",
+            "generated_preview_tool": "get_latest_edge_overlay",
+            "note": "This MCP tool provides the prompt and image tools to the connected assistant when called; it cannot proactively send messages into a ChatGPT conversation."
+        }
+
+    @mcp.tool()
+    def get_latest_edge_overlay() -> Image:
+        """Create and return a preview of detected edges over the latest raw frame, painted intense magenta/purple. This is OpenCV edge detection, not an AI-generated semantic correction."""
+        if not raw_path.exists():
+            raise ValueError("No raw frame uploaded yet. Start the local AeroWash bridge.")
+        age = time.time() - raw_path.stat().st_mtime
+        if age > 240:
+            raise ValueError(f"Raw frame is stale ({age:.1f}s); check the local bridge.")
+        frame = cv2.imread(str(raw_path))
+        if frame is None:
+            raise ValueError("Could not decode latest raw frame.")
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # Multi-scale Canny helps retain both prominent and finer visible boundaries.
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0.7)
+        edges_fine = cv2.Canny(blurred, 25, 65)
+        edges_coarse = cv2.Canny(blurred, 60, 140)
+        edges = cv2.bitwise_or(edges_fine, edges_coarse)
+        # Intense purple/magenta in OpenCV BGR.
+        overlay = frame.copy()
+        overlay[edges > 0] = (255, 0, 255)
+        ok, encoded = cv2.imencode(".jpg", overlay, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+        if not ok:
+            raise ValueError("Could not encode edge overlay.")
+        return Image(data=encoded.tobytes(), format="jpeg")
+
+    @mcp.tool()
     def create_training_capture() -> dict:
         """Freeze the latest fresh raw camera frame as a training example awaiting a human/AI edge correction."""
         if not raw_path.exists():
