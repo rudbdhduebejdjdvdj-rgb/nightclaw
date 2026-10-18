@@ -5,7 +5,8 @@ Run locally on the Mac, not on Render:
   export AEROWASH_TOKEN="the token configured in Render"
   python3 local_bridge.py
 
-This uploads camera frames over HTTPS using bearer authentication.
+Uploads the latest processed and raw JPEG every three minutes by default.
+This sends images to the hosted server, not proactively into a ChatGPT conversation.
 """
 import os
 import sys
@@ -16,7 +17,7 @@ import requests
 
 BASE_URL = os.environ.get("AEROWASH_URL", "https://nightclaw.onrender.com").rstrip("/")
 TOKEN = os.environ.get("AEROWASH_TOKEN", "")
-INTERVAL = max(1.0, float(os.environ.get("AEROWASH_UPLOAD_INTERVAL", "2")))
+INTERVAL = max(10.0, float(os.environ.get("AEROWASH_UPLOAD_INTERVAL", "180")))
 ROOT = Path.home() / "AeroWashVision"
 FRAME_DIR = ROOT / "dataset" / "connector"
 FILES = (("frame", FRAME_DIR / "latest.jpg"), ("raw", FRAME_DIR / "latest_raw.jpg"))
@@ -29,15 +30,14 @@ def main():
     session.headers.update({"Authorization": f"Bearer {TOKEN}"})
     print(f"AeroWash local bridge -> {BASE_URL}")
     print(f"Reading frames from {FRAME_DIR}")
-    print("Press Ctrl+C to stop. Frames are uploaded only to your configured server.")
-    last_mtime = {}
+    print(f"Upload interval: {INTERVAL:g} seconds ({INTERVAL / 60:g} minutes)")
+    print("Uploads latest processed + raw frames to Render. It does not push images into ChatGPT automatically.")
+    print("Press Ctrl+C to stop.")
     while True:
         for kind, path in FILES:
             try:
                 if not path.is_file():
-                    continue
-                mtime = path.stat().st_mtime
-                if last_mtime.get(kind) == mtime:
+                    print(f"Waiting for {path.name}...")
                     continue
                 data = path.read_bytes()
                 if not data:
@@ -49,7 +49,6 @@ def main():
                     timeout=15,
                 )
                 if response.ok:
-                    last_mtime[kind] = mtime
                     print(f"Uploaded {kind}: {len(data)} bytes")
                 else:
                     print(f"Upload {kind} failed: HTTP {response.status_code} {response.text[:200]}")
