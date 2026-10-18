@@ -9,13 +9,13 @@ from pathlib import Path
 import cv2
 import numpy as np
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.requests import Request
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.utilities.types import Image
+from mcp.server.transport_security import TransportSecuritySettings
 
 DATA_DIR = Path(os.environ.get("AEROWASH_DATA_DIR", "/tmp/aerowash-frames"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -103,7 +103,11 @@ class TokenMiddleware(BaseHTTPMiddleware):
             return JSONResponse({"error":"Unauthorized"}, status_code=401)
         return await call_next(request)
 
-mcp_app = mcp.streamable_http_app()
+mcp_app = mcp.streamable_http_app(
+    transport_security=TransportSecuritySettings(
+        allowed_hosts=["nightclaw.onrender.com", "nightclaw.onrender.com:*"]
+    )
+)
 mcp_app.add_middleware(TokenMiddleware)
 mcp_app.routes.extend([
     Route("/healthz", healthz, methods=["GET"]),
