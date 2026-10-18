@@ -9,7 +9,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from starlette.applications import Starlette
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.requests import Request
@@ -23,7 +23,12 @@ PROCESSED = DATA_DIR / "latest.jpg"
 RAW = DATA_DIR / "latest_raw.jpg"
 TOKEN = os.environ.get("AEROWASH_TOKEN", "")
 
-mcp = FastMCP("AeroWash Vision Connector")
+mcp = FastMCP(
+    "AeroWash Vision Connector",
+    transport_security=TransportSecuritySettings(
+        allowed_hosts=["nightclaw.onrender.com", "nightclaw.onrender.com:*"]
+    ),
+)
 
 def image_age(path):
     if not path.exists():
@@ -92,22 +97,31 @@ async def upload(request):
     path.write_bytes(body)
     return JSONResponse({"ok":True, "kind":kind, "bytes":len(body)})
 
-class TokenMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        if request.url.path == "/healthz":
-            return await call_next(request)
-        if not TOKEN:
-            return JSONResponse({"error":"AEROWASH_TOKEN is not configured"}, status_code=503)
-        supplied = request.headers.get("authorization", "")
-        if supplied != "Bearer " + TOKEN:
-            return JSONResponse({"error":"Unauthorized"}, status_code=401)
-        return await call_next(request)
+class TokenMiddleware:
+    """Raw ASGI auth middleware, compatible with streaming MCP responses."""
+    def __init__(self, app: ASGIApp):
+        self.app = app
 
-mcp_app = mcp.streamable_http_app(
-    transport_security=TransportSecuritySettings(
-        allowed_hosts=["nightclaw.onrender.com", "nightclaw.onrender.com:*"]
-    )
-)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope.get("path") == "/healthz":
+            await self.app(scope, receive, send)
+            return
+
+        headers = {
+            key.decode("latin-1").lower(): value.decode("latin-1")
+            for key, value in scope.get("headers", [])
+        }
+        if not TOKEN:
+            response = JSONResponse({"error": "AEROWASH_TOKEN is not configured"}, status_code=503)
+        elif headers.get("authorization", "") != "Bearer " + TOKEN:
+            response = JSONResponse({"error": "Unauthorized"}, status_code=401)
+        else:
+            await self.app(scope, receive, send)
+            return
+
+        await response(scope, receive, send)
+
+mcp_app = mcp.streamable_http_app()
 mcp_app.add_middleware(TokenMiddleware)
 mcp_app.routes.extend([
     Route("/healthz", healthz, methods=["GET"]),
