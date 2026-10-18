@@ -30,9 +30,8 @@ def register_training_tools(mcp, data_dir: Path, raw_path: Path):
             "note": "This MCP tool provides the prompt and image tools to the connected assistant when called; it cannot proactively send messages into a ChatGPT conversation."
         }
 
-    @mcp.tool()
-    def get_latest_edge_overlay() -> Image:
-        """Create and return a preview of detected edges over the latest raw frame, painted intense magenta/purple. This is OpenCV edge detection, not an AI-generated semantic correction."""
+    def _compute_edges():
+        """Return raw BGR frame, binary edge mask and magenta overlay."""
         if not raw_path.exists():
             raise ValueError("No raw frame uploaded yet. Start the local AeroWash bridge.")
         age = time.time() - raw_path.stat().st_mtime
@@ -42,18 +41,65 @@ def register_training_tools(mcp, data_dir: Path, raw_path: Path):
         if frame is None:
             raise ValueError("Could not decode latest raw frame.")
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # Multi-scale Canny helps retain both prominent and finer visible boundaries.
-        blurred = cv2.GaussianBlur(gray, (3, 3), 0.7)
-        edges_fine = cv2.Canny(blurred, 25, 65)
-        edges_coarse = cv2.Canny(blurred, 60, 140)
+        # Boost local contrast for dim camera scenes without changing the original.
+        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+        enhanced = clahe.apply(gray)
+        denoised = cv2.bilateralFilter(enhanced, 5, 35, 35)
+        # Low and high thresholds retain finer and stronger edges; combine both scales.
+        edges_fine = cv2.Canny(denoised, 18, 48, L2gradient=True)
+        edges_coarse = cv2.Canny(denoised, 45, 110, L2gradient=True)
         edges = cv2.bitwise_or(edges_fine, edges_coarse)
-        # Intense purple/magenta in OpenCV BGR.
+        # Remove isolated speckle while keeping thin boundaries.
+        count, labels, stats, _ = cv2.connectedComponentsWithStats((edges > 0).astype(np.uint8), 8)
+        cleaned = np.zeros_like(edges)
+        for idx in range(1, count):
+            if stats[idx, cv2.CC_STAT_AREA] >= 2:
+                cleaned[labels == idx] = 255
         overlay = frame.copy()
-        overlay[edges > 0] = (255, 0, 255)
-        ok, encoded = cv2.imencode(".jpg", overlay, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+        # Blend bright magenta with the source so lines remain visible but image context survives.
+        magenta = np.zeros_like(frame)
+        magenta[:] = (255, 0, 255)  # OpenCV BGR
+        active = cleaned > 0
+        overlay[active] = cv2.addWeighted(frame, 0.15, magenta, 0.85, 0)[active]
+        return frame, cleaned, overlay
+
+    @mcp.tool()
+    def get_latest_edge_overlay() -> Image:
+        """Generate and return the latest RAW frame with fine and coarse detected edges in intense magenta. Enhances low-light contrast first."""
+        _, mask, overlay = _compute_edges()
+        overlay_path = data_dir / "latest_edges_overlay.jpg"
+        if not cv2.imwrite(str(overlay_path), overlay, [int(cv2.IMWRITE_JPEG_QUALITY), 95]):
+            raise ValueError("Could not save edge overlay.")
+        ok, encoded = cv2.imencode(".jpg", overlay, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
         if not ok:
             raise ValueError("Could not encode edge overlay.")
         return Image(data=encoded.tobytes(), format="jpeg")
+
+    @mcp.tool()
+    def process_latest_edges() -> dict:
+        """Run edge detection on the latest RAW image, save the magenta overlay and binary mask, and report detected edge coverage."""
+        frame, mask, overlay = _compute_edges()
+        overlay_path = data_dir / "latest_edges_overlay.jpg"
+        mask_path = data_dir / "latest_edges_mask.png"
+        if not cv2.imwrite(str(overlay_path), overlay, [int(cv2.IMWRITE_JPEG_QUALITY), 95]):
+            raise ValueError("Could not save edge overlay.")
+        if not cv2.imwrite(str(mask_path), mask):
+            raise ValueError("Could not save edge mask.")
+        h, w = mask.shape
+        edge_pixels = int(np.count_nonzero(mask))
+        return {
+            "ok": True,
+            "prompt": "delinea todos los bordes por minimo q sean de todos los objetos y pintalos de morado intenso",
+            "source": str(raw_path),
+            "overlay_path": str(overlay_path),
+            "mask_path": str(mask_path),
+            "width": int(w),
+            "height": int(h),
+            "edge_pixels": edge_pixels,
+            "edge_pixel_percent": round(edge_pixels * 100 / (w * h), 2),
+            "overlay_tool": "get_latest_edge_overlay",
+            "note": "The overlay and mask are computed from the actual RAW frame using OpenCV. This is classical edge detection, not semantic AI."
+        }
 
     @mcp.tool()
     def create_training_capture() -> dict:
