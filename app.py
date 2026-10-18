@@ -7,7 +7,9 @@ import time
 from pathlib import Path
 
 import cv2
+import jwt
 import numpy as np
+from jwt import PyJWKClient
 from starlette.applications import Starlette
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.responses import JSONResponse
@@ -22,6 +24,11 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED = DATA_DIR / "latest.jpg"
 RAW = DATA_DIR / "latest_raw.jpg"
 TOKEN = os.environ.get("AEROWASH_TOKEN", "")
+AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN", "dev-k16wnrvnhk531llj.eu.auth0.com").strip().rstrip("/")
+AUTH0_ISSUER = f"https://{AUTH0_DOMAIN}/"
+AUTH0_AUDIENCE = os.environ.get("AUTH0_AUDIENCE", "https://nightclaw.onrender.com").strip()
+RESOURCE_URL = os.environ.get("MCP_RESOURCE_URL", "https://nightclaw.onrender.com").strip().rstrip("/")
+JWKS = PyJWKClient(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json")
 
 mcp = FastMCP(
     "AeroWash Vision Connector",
@@ -86,6 +93,14 @@ def analyze_latest_frame() -> dict:
 async def healthz(request):
     return JSONResponse({"ok": True, "service": "aerowash-mcp"})
 
+async def protected_resource_metadata(request):
+    return JSONResponse({
+        "resource": RESOURCE_URL,
+        "authorization_servers": [AUTH0_ISSUER.rstrip("/")],
+        "scopes_supported": [],
+        "bearer_methods_supported": ["header"],
+    })
+
 async def upload(request):
     kind = request.path_params["kind"]
     if kind not in ("frame", "raw"):
@@ -98,33 +113,53 @@ async def upload(request):
     return JSONResponse({"ok":True, "kind":kind, "bytes":len(body)})
 
 class TokenMiddleware:
-    """Raw ASGI auth middleware, compatible with streaming MCP responses."""
+    """Accept Auth0 JWTs for MCP and the existing bridge token for uploads."""
     def __init__(self, app: ASGIApp):
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope.get("path") == "/healthz":
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-
+        path = scope.get("path", "")
+        if path in ("/healthz", "/.well-known/oauth-protected-resource"):
+            await self.app(scope, receive, send)
+            return
         headers = {
             key.decode("latin-1").lower(): value.decode("latin-1")
             for key, value in scope.get("headers", [])
         }
-        if not TOKEN:
-            response = JSONResponse({"error": "AEROWASH_TOKEN is not configured"}, status_code=503)
-        elif headers.get("authorization", "") != "Bearer " + TOKEN:
-            response = JSONResponse({"error": "Unauthorized"}, status_code=401)
-        else:
+        authorization = headers.get("authorization", "")
+        token = authorization[7:] if authorization.startswith("Bearer ") else ""
+        if path.startswith("/upload/") and TOKEN and authorization == "Bearer " + TOKEN:
             await self.app(scope, receive, send)
             return
-
+        valid = False
+        if token and AUTH0_AUDIENCE:
+            try:
+                signing_key = JWKS.get_signing_key_from_jwt(token).key
+                claims = jwt.decode(
+                    token, signing_key, algorithms=["RS256"],
+                    audience=AUTH0_AUDIENCE, issuer=AUTH0_ISSUER,
+                    options={"require": ["exp", "iss", "aud"]},
+                )
+                valid = bool(claims)
+            except Exception:
+                valid = False
+        if valid:
+            await self.app(scope, receive, send)
+            return
+        response = JSONResponse(
+            {"error": "Unauthorized"}, status_code=401,
+            headers={"WWW-Authenticate": 'Bearer resource_metadata="https://nightclaw.onrender.com/.well-known/oauth-protected-resource"'},
+        )
         await response(scope, receive, send)
 
 mcp_app = mcp.streamable_http_app()
 mcp_app.add_middleware(TokenMiddleware)
 mcp_app.routes.extend([
     Route("/healthz", healthz, methods=["GET"]),
+    Route("/.well-known/oauth-protected-resource", protected_resource_metadata, methods=["GET"]),
     Route("/upload/{kind:str}", upload, methods=["POST"]),
 ])
 app = mcp_app
