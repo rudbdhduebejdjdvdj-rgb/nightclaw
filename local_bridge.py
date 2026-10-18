@@ -5,7 +5,7 @@ Run locally on the Mac, not on Render:
   export AEROWASH_TOKEN="the token configured in Render"
   python3 local_bridge.py
 
-Uploads the latest processed and raw JPEG every three minutes by default.
+Uploads the latest processed and raw JPEG every 29 minutes by default.
 This sends images to the hosted server, not proactively into a ChatGPT conversation.
 """
 import os
@@ -17,7 +17,7 @@ import requests
 
 BASE_URL = os.environ.get("AEROWASH_URL", "https://nightclaw.onrender.com").rstrip("/")
 TOKEN = os.environ.get("AEROWASH_TOKEN", "")
-INTERVAL = max(10.0, float(os.environ.get("AEROWASH_UPLOAD_INTERVAL", "180")))
+INTERVAL = max(10.0, float(os.environ.get("AEROWASH_UPLOAD_INTERVAL", "1740")))
 ROOT = Path.home() / "AeroWashVision"
 FRAME_DIR = ROOT / "dataset" / "connector"
 FILES = (("frame", FRAME_DIR / "latest.jpg"), ("raw", FRAME_DIR / "latest_raw.jpg"))
@@ -31,7 +31,7 @@ def main():
     print(f"AeroWash local bridge -> {BASE_URL}")
     print(f"Reading frames from {FRAME_DIR}")
     print(f"Upload interval: {INTERVAL:g} seconds ({INTERVAL / 60:g} minutes)")
-    print("Uploads latest processed + raw frames to Render. It does not push images into ChatGPT automatically.")
+    print("Uploads latest processed + raw frames to Render every 29 minutes by default. It does not push images into ChatGPT automatically.")
     print("Press Ctrl+C to stop.")
     while True:
         for kind, path in FILES:
