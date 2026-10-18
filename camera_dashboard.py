@@ -58,7 +58,7 @@ async function refresh(){if(busy)return;busy=true;try{const s=read();const r=awa
 $('zoom').oninput=updateLabels;$('sensitivity').oninput=updateLabels;$('apply').onclick=refresh;$('source').onchange=refresh;$('purple').onchange=refresh;$('reset').onclick=()=>{$('zoom').value=1;$('sensitivity').value=2;$('purple').value='true';$('source').value='raw';updateLabels();refresh()};$('snapshot').onclick=async()=>{try{const s=read();const r=await fetch('/snapshot?'+new URLSearchParams(s),{method:'POST'});const j=await r.json();$('message').textContent=j.ok?'Guardado: '+j.path:j.error}catch(e){$('message').textContent=e.message}};updateLabels();refresh();timer=setInterval(refresh,700);
 </script></body></html>"""
 
-def build_frame(query):
+def _build_frame_uncached(query):
     settings = {
         "zoom": max(1.0, min(4.0, float(query.get("zoom", ["1"])[0]))),
         "sensitivity": max(1, min(4, int(query.get("sensitivity", ["2"])[0]))),
@@ -102,6 +102,37 @@ def build_frame(query):
     ok, encoded = cv2.imencode(".jpg", out, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
     if not ok: raise RuntimeError("No se pudo codificar la imagen")
     return encoded.tobytes(), mask, (w, h), path.name
+
+
+def build_frame(query):
+    """Reuse the processed result while the source file and UI settings stay unchanged."""
+    settings = (
+        max(1.0, min(4.0, float(query.get("zoom", ["1"])[0]))),
+        max(1, min(4, int(query.get("sensitivity", ["2"])[0]))),
+        query.get("purple", ["true"])[0].lower() == "true",
+        "processed" if query.get("source", ["raw"])[0] == "processed" else "raw",
+    )
+    path = PROCESSED if settings[3] == "processed" else RAW
+    try:
+        stat = path.stat()
+        key = (str(path), stat.st_mtime_ns, stat.st_size, settings)
+    except OSError:
+        key = (str(path), None, None, settings)
+    with LOCK:
+        cached = CACHE.get(key)
+        if cached is not None:
+            return cached
+    result = _build_frame_uncached({
+        "zoom": [str(settings[0])],
+        "sensitivity": [str(settings[1])],
+        "purple": ["true" if settings[2] else "false"],
+        "source": [settings[3]],
+    })
+    with LOCK:
+        CACHE.clear()
+        CACHE[key] = result
+    return result
+
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_): pass
