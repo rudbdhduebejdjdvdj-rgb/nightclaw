@@ -1,4 +1,4 @@
-mcp>=1.9,<2
+mcp>=1.26.0,<2
 starlette>=0.37
 uvicorn[standard]>=0.30
 numpy>=1.26
