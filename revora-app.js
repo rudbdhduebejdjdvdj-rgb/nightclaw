@@ -167,14 +167,14 @@
     if(action==='edit-customer')return openModal('customer',state.customers.find(x=>x.id===id));
     if(action==='edit-product')return openModal('product',state.products.find(x=>x.id===id));
     if(action==='edit-expense')return openModal('expense',state.expenses.find(x=>x.id===id));
-    if(action==='delete-customer'){if(!confirm('¿Borrar este cliente? Los pedidos vinculados conservarán su registro, pero perderán el vínculo al cliente.'))return;await deleteRow('contacts',id)}
+    if(action==='delete-customer'){if(!confirm('¿Borrar este cliente? Los pedidos y facturas históricos pueden perder su vínculo.'))return;const [orders,invoices]=await Promise.all([c.from('sales_orders').update({customer_id:null}).eq('organization_id',org).eq('customer_id',id),c.from('invoices').update({customer_id:null}).eq('organization_id',org).eq('customer_id',id)]);if(orders.error)throw orders.error;if(invoices.error)throw invoices.error;await deleteRow('contacts',id)}
     if(action==='delete-product'){if(!confirm('¿Borrar este producto del inventario? Las líneas históricas conservarán su descripción.'))return;await deleteRow('products',id)}
     if(action==='delete-expense'){if(!confirm('¿Borrar este gasto?'))return;await deleteRow('expenses',id)}
-    if(action==='delete-order'){if(!confirm('¿Borrar este pedido y sus líneas?'))return;await deleteRow('sales_orders',id)}
+    if(action==='delete-order'){if(!confirm('¿Borrar este pedido y sus líneas?'))return;const lines=await c.from('sales_order_items').delete().eq('sales_order_id',id).eq('organization_id',org);if(lines.error)throw lines.error;await deleteRow('sales_orders',id)}
     if(action==='fulfill-order'){const order=state.orders.find(x=>x.id===id);const {error}=await c.from('sales_orders').update({status:order?.status==='fulfilled'?'confirmed':'fulfilled'}).eq('id',id).eq('organization_id',org);if(error)throw error}
     if(action==='issue-invoice'){if(!confirm('Esto marcará la factura como emitida dentro de Revora, pero no la convierte en factura fiscal homologada. ¿Continuar?'))return;const {error}=await c.from('invoices').update({status:'issued'}).eq('id',id).eq('organization_id',org);if(error)throw error}
     if(action==='pay-invoice'){const {error}=await c.from('invoices').update({status:'paid'}).eq('id',id).eq('organization_id',org);if(error)throw error}
-    if(action==='delete-invoice'){if(!confirm('¿Borrar este borrador y sus líneas?'))return;await deleteRow('invoices',id)}
+    if(action==='delete-invoice'){if(!confirm('¿Borrar este borrador y sus líneas?'))return;const inv=state.invoices.find(x=>x.id===id);if(inv?.status!=='draft'){toast('Solo se pueden borrar borradores.');return}const lines=await c.from('invoice_items').delete().eq('invoice_id',id).eq('organization_id',org);if(lines.error)throw lines.error;await deleteRow('invoices',id)}
     await queryAll();toast('Cambios guardados.');
   }
   async function refreshTeam(){
