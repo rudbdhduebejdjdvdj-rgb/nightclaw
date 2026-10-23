@@ -184,16 +184,25 @@ using (public.is_org_member(organization_id));
 
 create policy "owners and admins can add members"
 on public.organization_members for insert to authenticated
-with check (public.has_org_role(organization_id, array['owner','admin']));
+with check (
+  public.has_org_role(organization_id, array['owner','admin'])
+  and role in ('admin','member')
+);
 
-create policy "owners and admins can update members"
+create policy "only owners can change member roles"
 on public.organization_members for update to authenticated
-using (public.has_org_role(organization_id, array['owner','admin']))
-with check (public.has_org_role(organization_id, array['owner','admin']));
+using (public.has_org_role(organization_id, array['owner']))
+with check (
+  public.has_org_role(organization_id, array['owner'])
+  and role in ('admin','member')
+);
 
-create policy "owners and admins can remove members"
+create policy "owners remove members and admins remove non-owners"
 on public.organization_members for delete to authenticated
-using (public.has_org_role(organization_id, array['owner','admin']));
+using (
+  public.has_org_role(organization_id, array['owner'])
+  or (public.has_org_role(organization_id, array['admin']) and role <> 'owner')
+);
 
 create policy "members manage contacts"
 on public.contacts for all to authenticated
@@ -212,7 +221,7 @@ with check (
   public.is_org_member(organization_id)
   and (customer_id is null or exists (
     select 1 from public.contacts c
-    where c.id = customer_id and c.organization_id = organization_id
+    where c.id = sales_orders.customer_id and c.organization_id = sales_orders.organization_id
   ))
 );
 
@@ -223,11 +232,11 @@ with check (
   public.is_org_member(organization_id)
   and exists (
     select 1 from public.sales_orders so
-    where so.id = sales_order_id and so.organization_id = organization_id
+    where so.id = sales_order_items.sales_order_id and so.organization_id = sales_order_items.organization_id
   )
   and (product_id is null or exists (
     select 1 from public.products p
-    where p.id = product_id and p.organization_id = organization_id
+    where p.id = sales_order_items.product_id and p.organization_id = sales_order_items.organization_id
   ))
 );
 
@@ -238,7 +247,7 @@ with check (
   public.is_org_member(organization_id)
   and (supplier_id is null or exists (
     select 1 from public.contacts c
-    where c.id = supplier_id and c.organization_id = organization_id
+    where c.id = expenses.supplier_id and c.organization_id = expenses.organization_id
   ))
 );
 
