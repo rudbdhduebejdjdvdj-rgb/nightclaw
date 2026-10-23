@@ -1,17 +1,28 @@
-# ZENVORAES — Tienda digital
+# Revora — Business Suite
 
-Este repositorio contiene únicamente la web actual de ZENVORAES.
+Revora es una interfaz de demostración para gestionar un negocio desde un único panel: CRM, ventas, facturación, inventario, finanzas e informes.
 
-## Archivos de la tienda
-- `index.html`: página principal, catálogo, buscador, filtros, ordenación y favoritos.
-- `style.css`: diseño adaptable con colores pastel.
-- `CNAME`: configuración del dominio personalizado.
-- `.github/workflows/pages.yml`: publicación automática en GitHub Pages.
+## Demo publicada
+- Dominio: https://nightclaw.es
+- Repositorio: https://github.com/rudbdhduebejdjdvdj-rgb/nightclaw
 
-## Productos digitales
-- Pósteres de motivación personal — https://zenvoraes.gumroad.com/l/rfrfgefef
-- Fashion Dolls — https://zenvoraes.gumroad.com/l/edde
-- 20 dibujos para pintar — https://zenvoraes.gumroad.com/l/dlsjz
+## Qué incluye esta versión
+- Panel de indicadores y gráficos de ejemplo.
+- Navegación entre módulos.
+- Alta local de clientes, productos y pedidos de demostración.
+- Exportación CSV.
+- Búsqueda, diseño adaptable y almacenamiento local del navegador.
+
+## Limitaciones importantes
+Esta versión es una **demo frontend**, no un ERP de producción ni una instalación de Odoo. Los datos son ficticios y los registros creados se guardan solo en el navegador actual. No hay autenticación, base de datos compartida, permisos multiusuario, conexión bancaria ni emisión de facturas legales. No la uses para datos personales reales ni para llevar contabilidad oficial.
+
+## Próxima fase para convertirla en un ERP real
+1. Backend y API segura.
+2. Base de datos con usuarios, roles y permisos.
+3. Autenticación y recuperación de cuenta.
+4. CRM, pedidos, productos y movimientos persistidos en servidor.
+5. Facturación conforme a la normativa aplicable en España, revisada profesionalmente.
+6. Copias de seguridad, registros de auditoría, pruebas y despliegue seguro.
 
 ## Publicación
-GitHub Pages se publica desde la rama `main`. Los pagos y la entrega se gestionan en las fichas de Gumroad.
+La web está preparada como página estática en GitHub Pages. El archivo `CNAME` conserva el dominio personalizado `nightclaw.es`.
