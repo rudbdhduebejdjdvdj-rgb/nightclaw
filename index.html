@@ -64,62 +64,81 @@ body:not(.authenticated) .app{display:none}.auth-shell{min-height:100vh;display:
 <section class="page-view" id="page-settings"><div class="welcome"><div><div class="eyebrow">PERSONALIZA TU ESPACIO</div><h1>Configuración</h1><p>Preferencias locales de la demo de Revora.</p></div></div><div class="panel"><div class="panel-head"><div><h2>Preferencias generales</h2><p>Opciones de interfaz, sin servidor ni cuenta real</p></div></div><div class="activity-list"><div class="activity"><span class="activity-icon">◉</span><div><p><strong>Nombre del espacio</strong><br>Revora Studio</p><small>La personalización persistente requiere guardar los ajustes en un backend.</small></div></div><div class="activity"><span class="activity-icon">♧</span><div><p><strong>Notificaciones</strong><br>Las notificaciones de esta demo son ilustrativas.</p></div></div><div class="activity"><span class="activity-icon">▤</span><div><p><strong>Privacidad y datos</strong><br>Los registros creados se guardan en el almacenamiento local de este navegador.</p><button class="btn" style="margin-top:8px" data-action="clear-data">Borrar datos locales de demo</button></div></div></div></div></section>
 </div></main></div>
 <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title"><form class="modal" id="modal-form"><div class="modal-head"><h2 id="modal-title">Crear nuevo registro</h2><button type="button" id="modal-close" aria-label="Cerrar">×</button></div><div class="modal-body" id="modal-fields"></div><div class="modal-foot"><button type="button" class="btn" id="modal-cancel">Cancelar</button><button type="submit" class="btn primary">Guardar en esta demo</button></div></form></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="revora-app.js"></script>
 <script>
-(() => {
-const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
-const titles={dashboard:'Resumen',crm:'Clientes · CRM',sales:'Ventas y pedidos',invoices:'Facturación',inventory:'Inventario',finance:'Finanzas',reports:'Informes',settings:'Configuración'};
-let customers=[],products=[],orders=[],mode='';
-try{customers=JSON.parse(localStorage.getItem('revora-customers')||'[]');products=JSON.parse(localStorage.getItem('revora-products')||'[]');orders=JSON.parse(localStorage.getItem('revora-orders')||'[]')}catch(e){}
-const persist=()=>{try{localStorage.setItem('revora-customers',JSON.stringify(customers));localStorage.setItem('revora-products',JSON.stringify(products));localStorage.setItem('revora-orders',JSON.stringify(orders))}catch(e){toast('No se pudieron guardar los datos en este navegador.')}};
-let toastTimer;function toast(message){const t=$('#toast');t.textContent=message;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3000)}
-function navigate(page){if(!titles[page])return;$$('.page-view').forEach(v=>v.classList.toggle('active',v.id==='page-'+page));$$('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#crumb-current').textContent=titles[page];window.scrollTo({top:0,behavior:'smooth'});}
-$$('[data-page]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
-$$('[data-page-link]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.pageLink)));
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function euro(n){return Number(n).toLocaleString('es-ES',{style:'currency',currency:'EUR'})}
-function renderCustomers(){const body=$('#customers-body');if(!body)return;body.innerHTML='';if(!customers.length){body.innerHTML='<tr><td colspan="4">Todavía no hay clientes. Añade el primero con «Añadir cliente».</td></tr>';$('#crm-total').textContent='0';$('#stat-customers').textContent='0';return}body.innerHTML=customers.slice().reverse().map(c=>'<tr><td>'+esc(c.name)+'</td><td>'+esc(c.company||'—')+'</td><td>'+esc(c.email)+'</td><td><span class="status paid">Nuevo</span></td></tr>').join('');$('#crm-total').textContent=customers.length;$('#stat-customers').textContent=customers.length}
-function renderProducts(){const body=$('#products-body');if(!body)return;body.innerHTML='';if(!products.length){body.innerHTML='<tr><td colspan="5">Todavía no hay productos. Añade el primero.</td></tr>';$('#stock-total').textContent='0';return}body.innerHTML=products.slice().reverse().map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p.sku||'REV-'+Math.random().toString(36).slice(2,6).toUpperCase())+'</td><td>'+esc(p.stock)+'</td><td>'+esc(p.min||0)+'</td><td><span class="status '+(Number(p.stock)<=Number(p.min)?'pending':'paid')+'">'+(Number(p.stock)<=Number(p.min)?'Reponer':'Correcto')+'</span></td></tr>').join('');$('#stock-total').textContent=products.length}
-function renderOrders(){if(!orders.length)return;const html=orders.slice().reverse().map(o=>'<tr><td>'+esc(o.ref)+'</td><td>'+esc(o.customer)+'</td><td>'+esc(new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}))+'</td><td>'+euro(o.amount)+'</td><td><span class="status pending">Demo</span></td></tr>').join('');$('#sales-body').insertAdjacentHTML('afterbegin',html);$('#sales-total').textContent=148+orders.length;$('#stat-orders').textContent=148+orders.length}
-function openModal(type){mode=type;const config={
-customer:{title:'Añadir cliente',fields:[['name','Nombre completo','text','Ej. Ana García',true],['company','Empresa','text','Nombre de la empresa',false],['email','Correo electrónico','email','ana@ejemplo.es',true]]},
-product:{title:'Añadir producto',fields:[['name','Nombre del producto','text','Ej. Cuaderno A5',true],['sku','Referencia / SKU','text','PROD-001',false],['stock','Existencias','number','0',true],['min','Stock mínimo','number','5',true]]},
-order:{title:'Crear pedido de demo',fields:[['customer','Nombre del cliente','text','Ej. Ana García',true],['amount','Importe (€)','number','0.00',true]]},
-invoice:{title:'Crear factura de demo',fields:[['customer','Cliente','text','Ej. Ana García',true],['amount','Importe (€)','number','0.00',true]]}
-}[type];$('#modal-title').textContent=config.title;$('#modal-fields').innerHTML=config.fields.map(([name,label,input,placeholder,required])=>'<div class="field"><label for="field-'+name+'">'+label+'</label><input id="field-'+name+'" name="'+name+'" type="'+input+'" placeholder="'+placeholder+'" '+(required?'required':'')+(input==='number'?' min="0" step="0.01"':'')+'></div>').join('');$('#modal-backdrop').classList.add('open');setTimeout(()=>$('#modal-fields input')?.focus(),80)}
-function closeModal(){$('#modal-backdrop').classList.remove('open')}
-$('#modal-close').addEventListener('click',closeModal);$('#modal-cancel').addEventListener('click',closeModal);$('#modal-backdrop').addEventListener('click',e=>{if(e.target.id==='modal-backdrop')closeModal()});
-$('#modal-form').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget).entries());const backend=window.revoraBackend;if((mode==='customer'||mode==='product')&&backend?.client&&backend?.orgId){const row=mode==='customer'?{organization_id:backend.orgId,kind:'customer',name:data.name,company:data.company||null,email:data.email||null}:{organization_id:backend.orgId,name:data.name,sku:data.sku||null,stock_quantity:Number(data.stock)||0,unit_price:0,description:null};const table=mode==='customer'?'contacts':'products';const {data:saved,error}=await backend.client.from(table).insert(row).select().single();if(error){toast('No se pudo guardar: '+error.message);return}if(mode==='customer'){customers.push({name:saved.name,company:data.company,email:saved.email||''});renderCustomers()}else{products.push({name:saved.name,sku:saved.sku||'',stock:saved.stock_quantity,min:data.min||0});renderProducts()}toast(mode==='customer'?'Cliente guardado en la nube.':'Producto guardado en la nube.')}else if(mode==='customer'){customers.push(data);persist();renderCustomers();toast('Cliente añadido a la demo.')}else if(mode==='product'){products.push(data);persist();renderProducts();toast('Producto añadido al inventario de demo.')}else if(mode==='order'||mode==='invoice'){data.ref='DEMO-'+Date.now().toString().slice(-6);data.amount=Number(data.amount)||0;orders.push(data);persist();renderOrders();toast('Registro de demo guardado.')}closeModal();e.currentTarget.reset()});
-$$('[data-action]').forEach(b=>b.addEventListener('click',()=>{switch(b.dataset.action){case'new':openModal('customer');break;case'add-customer':openModal('customer');break;case'add-product':openModal('product');break;case'add-order':openModal('order');break;case'add-invoice':openModal('invoice');break;case'help':toast('Revora organiza clientes, ventas, facturas, inventario y finanzas en un solo espacio.');break;case'category-info':toast('La distribución por categoría es ilustrativa.');break;case'export':exportCSV('revora-resumen.csv',[['Métrica','Valor'],['Ingresos de demo','12840'],['Pedidos de demo',148+orders.length],['Clientes de demo',326+customers.length]]);break;case'export-customers':exportCSV('revora-clientes.csv',[['Nombre','Empresa','Correo'],...customers.map(c=>[c.name,c.company,c.email])]);break;case'export-products':exportCSV('revora-inventario.csv',[['Producto','SKU','Existencias','Mínimo'],...products.map(p=>[p.name,p.sku,p.stock,p.min])]);break;case'export-orders':exportCSV('revora-pedidos.csv',[['Referencia','Cliente','Importe'],...orders.map(o=>[o.ref,o.customer,o.amount])]);break;case'clear-data':if(confirm('¿Seguro que quieres borrar los clientes, productos y pedidos guardados localmente en este navegador?')){customers=[];products=[];orders=[];persist();location.reload()}break;}}));
-function exportCSV(filename,rows){const csv=rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);toast('Exportación CSV preparada.')}
-$('#dismiss-notice').addEventListener('click',()=>$('#demo-notice').hidden=true);
-$('#help-button').addEventListener('click',()=>toast('Demo de Revora: explora los módulos del menú lateral.'));
-$('#notifications').addEventListener('click',()=>toast('No hay notificaciones nuevas en esta demo.'));
-$('#chart-period').addEventListener('change',e=>{const paths={week:'M40 145 C75 135 95 110 130 118 S185 130 220 92 S275 104 310 75 S365 95 400 58 S455 70 490 45 S545 57 580 28 L610 40',month:'M40 150 C70 120 90 137 130 110 S180 120 220 82 S270 120 310 95 S360 50 400 72 S450 40 490 61 S550 25 580 42 L610 22',year:'M40 155 C70 145 90 120 130 135 S180 85 220 100 S270 70 310 95 S360 45 400 65 S450 30 490 48 S550 20 580 35 L610 18'};$('#line-main').setAttribute('d',paths[e.target.value]);toast('Gráfico de '+({week:'esta semana',month:'este mes',year:'este año'}[e.target.value])+' actualizado (datos ilustrativos).')});
-$('#global-search').addEventListener('input',e=>{const term=e.target.value.trim().toLocaleLowerCase('es');if(!term)return;const pages=[...$$('.page-view')];const match=pages.find(p=>p.textContent.toLocaleLowerCase('es').includes(term));if(match){const page=match.id.replace('page-','');navigate(page)}});
-document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#global-search').focus()}if(e.key==='Escape')closeModal()});
-window.revoraUI={setCloudData:(cs,ps)=>{customers=cs;products=ps;$('#customers-body').innerHTML='';$('#products-body').innerHTML='';renderCustomers();renderProducts()},toast};
-renderCustomers();renderProducts();renderOrders();
-})();
-
 // Revora authentication: email/password only. No Google or Apple OAuth providers.
 (() => {
  const {createClient}=window.supabase;
  const client=createClient('https://mgmbppdtmjeievgrsrgn.supabase.co','sb_publishable_rVvix7MA49y6NbHtZsPmVQ_us1hADpl');
  window.revoraBackend={client,orgId:null};
- let mode='login';
+ let mode='login',pendingUser=null;
  const $=s=>document.querySelector(s);
- const message=(text,error=false)=>{const el=$('#auth-message');el.textContent=text;el.classList.toggle('error',error)};
+ const message=(text,error=false)=>{const el=$('#auth-message');if(el){el.textContent=text;el.classList.toggle('error',error)}};
  function setMode(next){mode=next;document.querySelectorAll('[data-auth-mode]').forEach(b=>b.classList.toggle('active',b.dataset.authMode===mode));$('#auth-heading').textContent=mode==='login'?'Bienvenido a Revora':'Crea tu cuenta de Revora';$('#auth-subtitle').textContent=mode==='login'?'Entra a tu espacio de trabajo para gestionar tu negocio.':'Regístrate con tu correo electrónico y crea tu espacio de trabajo.';$('#auth-name-wrap').hidden=mode!=='signup';$('#auth-name').required=mode==='signup';$('#auth-password').autocomplete=mode==='login'?'current-password':'new-password';$('#auth-submit').textContent=mode==='login'?'Entrar con correo':'Crear cuenta';message('')}
  document.querySelectorAll('[data-auth-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.authMode)));
- let pendingUser=null;async function enterApp(user){pendingUser=user;message('Buscando tu espacio de trabajo…');let {data:members,error}=await client.from('organization_members').select('organization_id,role,organizations(name)').eq('user_id',user.id).limit(1);if(error){message('No se pudo cargar tu espacio: '+error.message,true);return}let org=members?.[0];if(!org){$('#auth-form').hidden=true;$('#company-form').hidden=false;$('#company-name').value='';$('#company-name').focus();return}
- window.revoraBackend.orgId=org.organization_id;document.body.classList.add('authenticated');const label=org.organizations?.name||'Mi empresa';document.querySelector('.workspace strong').textContent=label;document.querySelector('.profile strong').textContent=user.user_metadata?.full_name||user.email.split('@')[0];document.querySelector('.profile small').textContent=user.email;document.querySelector('.top-avatar').textContent=(user.email[0]||'R').toUpperCase();document.querySelector('.avatar').textContent=(user.email[0]||'R').toUpperCase();
- const [cs,ps]=await Promise.all([client.from('contacts').select('id,name,email,phone,company').eq('organization_id',org.organization_id).in('kind',['customer','both']).order('created_at',{ascending:false}),client.from('products').select('id,name,sku,stock_quantity,unit_price').eq('organization_id',org.organization_id).order('created_at',{ascending:false})]);if(cs.error||ps.error){window.revoraUI.toast('Sesión iniciada; algunos datos no se pudieron cargar.');return}
- window.revoraUI.setCloudData(cs.data.map(c=>({name:c.name,company:c.company||'',email:c.email||''})),ps.data.map(p=>({name:p.name,sku:p.sku||'',stock:p.stock_quantity,min:0})));$('#demo-notice').innerHTML='<span>☁</span><div><b>Revora está conectada.</b> Los clientes y productos nuevos se guardan en la base de datos de tu empresa.</div><button id="auth-signout" aria-label="Cerrar sesión">Salir</button>';$('#auth-signout').addEventListener('click',async()=>{await client.auth.signOut();location.reload()});
+ async function enterApp(user){
+   pendingUser=user;
+   let invitedOrgId=null;
+   const inviteToken=new URLSearchParams(location.search).get('invite');
+   if(inviteToken){
+     message('Validando la invitación…');
+     const {data,error}=await client.rpc('accept_org_invite',{invite_token:inviteToken});
+     if(error){message('No se pudo aceptar la invitación: '+error.message,true);return}
+     invitedOrgId=data||null;
+     history.replaceState(null,'',location.pathname);
+   }
+   message('Cargando tu empresa…');
+   let org=null;
+   if(invitedOrgId){
+     const {data,error}=await client.from('organization_members').select('organization_id,role,organizations(name)').eq('user_id',user.id).eq('organization_id',invitedOrgId).maybeSingle();
+     if(error){message('La invitación se aceptó, pero no se pudo cargar la empresa: '+error.message,true);return}
+     org=data;
+   }else{
+     const {data,error}=await client.from('organization_members').select('organization_id,role,organizations(name)').eq('user_id',user.id).order('created_at',{ascending:true}).limit(1);
+     if(error){message('No se pudo cargar tu espacio: '+error.message,true);return}
+     org=data?.[0]||null;
+   }
+   if(!org){
+     $('#auth-form').hidden=true;$('#company-form').hidden=false;$('#company-name').value='';$('#company-name').focus();return;
+   }
+   window.revoraBackend.orgId=org.organization_id;
+   const orgName=org.organizations?.name||'Mi empresa';
+   const userName=user.user_metadata?.full_name||user.email.split('@')[0];
+   window.revoraAuthContext={user,orgId:org.organization_id,orgName,role:org.role||'member'};
+   document.body.classList.add('authenticated');
+   $('.workspace strong').textContent=orgName;
+   $('.workspace span:not(.chev):not(.workspace-icon)')?.replaceChildren(document.createTextNode('Empresa'));
+   $('.profile strong').textContent=userName;
+   $('.profile small').textContent=user.email;
+   $('.top-avatar').textContent=(userName[0]||'R').toUpperCase();
+   $('.avatar').textContent=(userName[0]||'R').toUpperCase();
+   const [cs,ps]=await Promise.all([
+     client.from('contacts').select('id,organization_id,kind,name,company,email,phone,tax_id,address,notes,created_at').eq('organization_id',org.organization_id).in('kind',['customer','both']).order('created_at',{ascending:false}),
+     client.from('products').select('id,organization_id,name,sku,description,unit_price,stock_quantity,min_stock,active,created_at').eq('organization_id',org.organization_id).order('created_at',{ascending:false})
+   ]);
+   if(cs.error||ps.error){message('La sesión se ha iniciado, pero hubo un problema cargando datos: '+(cs.error?.message||ps.error?.message),true);return}
+   if(window.revoraUI)window.revoraUI.setCloudData(cs.data||[],ps.data||[]);
+   window.dispatchEvent(new CustomEvent('revora:ready',{detail:window.revoraAuthContext}));
+   const notice=$('#demo-notice');
+   if(notice){notice.innerHTML='<span>☁</span><div><b>Revora está conectada.</b> Los cambios se guardan en la base de datos privada de tu empresa.</div><button id="auth-signout" aria-label="Cerrar sesión">Salir</button>'}
  }
- $('#company-form').addEventListener('submit',async e=>{e.preventDefault();if(!pendingUser){message('Inicia sesión para continuar.',true);$('#company-form').hidden=true;$('#auth-form').hidden=false;return}const btn=$('#company-submit'),name=$('#company-name').value.trim(),msg=$('#company-message');btn.disabled=true;msg.textContent='Creando empresa…';msg.classList.remove('error');try{const {data:orgId,error}=await client.rpc('create_organization',{org_name:name});if(error)throw error;await enterApp(pendingUser)}catch(err){msg.textContent='No se pudo crear la empresa: '+(err.message||'Error inesperado');msg.classList.add('error')}finally{btn.disabled=false}});
- $('#auth-form').addEventListener('submit',async e=>{e.preventDefault();const email=$('#auth-email').value.trim(),password=$('#auth-password').value;const submit=$('#auth-submit');submit.disabled=true;message(mode==='login'?'Iniciando sesión…':'Creando tu cuenta…');try{if(mode==='login'){const {data,error}=await client.auth.signInWithPassword({email,password});if(error)throw error;if(data.user)await enterApp(data.user)}else{const {data,error}=await client.auth.signUp({email,password,options:{data:{full_name:$('#auth-name').value.trim()}}});if(error)throw error;if(data.session&&data.user){await enterApp(data.user)}else{message('Cuenta creada. Revisa tu correo para confirmar la dirección y después inicia sesión.')}}}catch(err){message(err.message||'Ha ocurrido un error al acceder.',true)}finally{submit.disabled=false}});
+ $('#company-form').addEventListener('submit',async e=>{
+   e.preventDefault();if(!pendingUser){message('Inicia sesión para continuar.',true);$('#company-form').hidden=true;$('#auth-form').hidden=false;return}
+   const btn=$('#company-submit'),name=$('#company-name').value.trim(),msg=$('#company-message');btn.disabled=true;msg.textContent='Creando empresa…';msg.classList.remove('error');
+   try{const {data:orgId,error}=await client.rpc('create_organization',{org_name:name});if(error)throw error;await enterApp(pendingUser)}
+   catch(err){msg.textContent='No se pudo crear la empresa: '+(err.message||'Error inesperado');msg.classList.add('error')}
+   finally{btn.disabled=false}
+ });
+ $('#auth-form').addEventListener('submit',async e=>{
+   e.preventDefault();const email=$('#auth-email').value.trim(),password=$('#auth-password').value,submit=$('#auth-submit');submit.disabled=true;message(mode==='login'?'Iniciando sesión…':'Creando tu cuenta…');
+   try{
+     if(mode==='login'){const {data,error}=await client.auth.signInWithPassword({email,password});if(error)throw error;if(data.user)await enterApp(data.user)}
+     else{const {data,error}=await client.auth.signUp({email,password,options:{data:{full_name:$('#auth-name').value.trim()}}});if(error)throw error;if(data.session&&data.user){await enterApp(data.user)}else{message('Cuenta creada. Revisa tu correo para confirmar la dirección y después inicia sesión.')}}
+   }catch(err){message(err.message||'Ha ocurrido un error al acceder.',true)}
+   finally{submit.disabled=false}
+ });
  client.auth.getSession().then(({data,error})=>{if(error){message(error.message,true);return}if(data.session?.user)enterApp(data.session.user)});
-})();
+})();;
 </script>
 </body>
 </html>
