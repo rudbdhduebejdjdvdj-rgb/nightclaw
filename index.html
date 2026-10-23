@@ -24,7 +24,7 @@ body:not(.authenticated) .app{display:none}.auth-shell{min-height:100vh;display:
 </style>
 </head>
 <body>
-<section class="auth-shell" id="auth-shell"><form class="auth-card" id="auth-form"><div class="auth-brand"><span class="brand-mark">r</span>revora</div><h1 id="auth-heading">Bienvenido a Revora</h1><p id="auth-subtitle">Entra a tu espacio de trabajo para gestionar tu negocio.</p><div class="auth-tabs"><button type="button" class="active" data-auth-mode="login">Iniciar sesión</button><button type="button" data-auth-mode="signup">Crear cuenta</button></div><div class="field" id="auth-name-wrap" hidden><label for="auth-name">Nombre</label><input id="auth-name" autocomplete="name" placeholder="Tu nombre"></div><div class="field"><label for="auth-email">Correo electrónico</label><input id="auth-email" type="email" autocomplete="email" required placeholder="tu@empresa.es"></div><div class="field"><label for="auth-password">Contraseña</label><input id="auth-password" type="password" autocomplete="current-password" required minlength="8" placeholder="Mínimo 8 caracteres"></div><button class="btn primary" id="auth-submit" type="submit">Entrar con correo</button><div class="auth-message" id="auth-message" role="status" aria-live="polite"></div><div class="auth-foot">Acceso únicamente con correo electrónico y contraseña.<br>No se utilizan Google ni Apple.</div></form><form class="auth-card" id="company-form" hidden><div class="auth-brand"><span class="brand-mark">r</span>revora</div><h1>Crea tu empresa</h1><p>Tu cuenta está lista. Ahora configura el espacio donde gestionarás clientes, productos y ventas.</p><div class="field"><label for="company-name">Nombre de la empresa</label><input id="company-name" name="company_name" required minlength="2" maxlength="120" placeholder="Ej. Mi Empresa S.L."></div><button class="btn primary" id="company-submit" type="submit">Crear empresa y continuar</button><div class="auth-message" id="company-message" role="status" aria-live="polite"></div><div class="auth-foot">Tus datos estarán separados de los de otras empresas.</div></form></section>
+<section class="auth-shell" id="auth-shell"><form class="auth-card" id="auth-form"><div class="auth-brand"><span class="brand-mark">r</span>revora</div><h1 id="auth-heading">Bienvenido a Revora</h1><p id="auth-subtitle">Entra a tu espacio de trabajo para gestionar tu negocio.</p><div class="auth-tabs"><button type="button" class="active" data-auth-mode="login">Iniciar sesión</button><button type="button" data-auth-mode="signup">Crear cuenta</button></div><div class="field" id="auth-name-wrap" hidden><label for="auth-name">Nombre</label><input id="auth-name" autocomplete="name" placeholder="Tu nombre"></div><div class="field"><label for="auth-email">Correo electrónico</label><input id="auth-email" type="email" autocomplete="email" required placeholder="tu@empresa.es"></div><div class="field"><label for="auth-password">Contraseña</label><input id="auth-password" type="password" autocomplete="current-password" required minlength="8" placeholder="Mínimo 8 caracteres"></div><button class="btn primary" id="auth-submit" type="submit">Entrar con correo</button><div class="auth-message" id="auth-message" role="status" aria-live="polite"></div><div class="auth-foot">Acceso únicamente con correo electrónico y contraseña.<br>No se utilizan Google ni Apple.</div></form><form class="auth-card" id="company-form" hidden><div class="auth-brand"><span class="brand-mark">r</span>revora</div><h1>Crea tu empresa</h1><p>Tu cuenta está lista. Ahora configura el espacio donde gestionarás clientes, productos y ventas.</p><div class="field"><label for="company-name">Nombre de la empresa</label><input id="company-name" name="company_name" required minlength="2" maxlength="120" placeholder="Ej. Mi Empresa S.L."></div><button class="btn primary" id="company-submit" type="submit">Crear empresa y continuar</button><div class="auth-message" id="company-message" role="status" aria-live="polite"></div><div class="auth-foot">Tus datos estarán separados de los de otras empresas.</div></form><form class="auth-card" id="set-password-form" hidden><div class="auth-brand"><span class="brand-mark">r</span>revora</div><h1>Protege tu cuenta</h1><p>Define una contraseña para terminar de activar tu acceso al equipo.</p><div class="field"><label for="invite-password">Nueva contraseña</label><input id="invite-password" type="password" autocomplete="new-password" required minlength="8" placeholder="Mínimo 8 caracteres"></div><div class="field"><label for="invite-password-confirm">Repite la contraseña</label><input id="invite-password-confirm" type="password" autocomplete="new-password" required minlength="8" placeholder="Repite la contraseña"></div><button class="btn primary" id="set-password-submit" type="submit">Guardar contraseña y continuar</button><div class="auth-message" id="set-password-message" role="status" aria-live="polite"></div></form></section>
 <div class="app">
 <aside class="sidebar">
   <div class="brand"><span class="brand-mark">r</span><span class="brand-name">revora<small>BUSINESS SUITE</small></span></div>
@@ -84,9 +84,9 @@ body:not(.authenticated) .app{display:none}.auth-shell{min-height:100vh;display:
  const message=(text,error=false)=>{const el=$('#auth-message');if(el){el.textContent=text;el.classList.toggle('error',error)}};
  function setMode(next){mode=next;document.querySelectorAll('[data-auth-mode]').forEach(b=>b.classList.toggle('active',b.dataset.authMode===mode));$('#auth-heading').textContent=mode==='login'?'Bienvenido a Revora':'Crea tu cuenta de Revora';$('#auth-subtitle').textContent=mode==='login'?'Entra a tu espacio de trabajo para gestionar tu negocio.':'Regístrate con tu correo electrónico y crea tu espacio de trabajo.';$('#auth-name-wrap').hidden=mode!=='signup';$('#auth-name').required=mode==='signup';$('#auth-password').autocomplete=mode==='login'?'current-password':'new-password';$('#auth-submit').textContent=mode==='login'?'Entrar con correo':'Crear cuenta';message('')}
  document.querySelectorAll('[data-auth-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.authMode)));
- async function enterApp(user){
+ async function enterApp(user,preferredOrgId=null){
    pendingUser=user;
-   let invitedOrgId=null;
+   let invitedOrgId=preferredOrgId||user.user_metadata?.organization_id||null;
    const inviteToken=new URLSearchParams(location.search).get('invite');
    if(inviteToken){
      message('Validando la invitación…');
@@ -95,6 +95,7 @@ body:not(.authenticated) .app{display:none}.auth-shell{min-height:100vh;display:
      invitedOrgId=data||null;
      history.replaceState(null,'',location.pathname);
    }
+   if(user.user_metadata?.revora_invited===true&&user.user_metadata?.revora_password_set!==true){window.revoraPendingInvitedOrgId=invitedOrgId;$('#auth-form').hidden=true;$('#company-form').hidden=true;$('#set-password-form').hidden=false;$('#invite-password').focus();return}
    message('Cargando tu empresa…');
    let org=null;
    if(invitedOrgId){
@@ -130,6 +131,15 @@ body:not(.authenticated) .app{display:none}.auth-shell{min-height:100vh;display:
    const notice=$('#demo-notice');
    if(notice){notice.innerHTML='<span>☁</span><div><b>Revora está conectada.</b> Los cambios se guardan en la base de datos privada de tu empresa.</div><button id="auth-signout" aria-label="Cerrar sesión">Salir</button>'}
  }
+
+ $('#set-password-form').addEventListener('submit',async e=>{
+   e.preventDefault();const first=$('#invite-password').value,second=$('#invite-password-confirm').value,msg=$('#set-password-message'),btn=$('#set-password-submit');
+   if(first!==second){msg.textContent='Las contraseñas no coinciden.';msg.classList.add('error');return}
+   btn.disabled=true;msg.textContent='Guardando contraseña…';msg.classList.remove('error');
+   try{const {data,error}=await client.auth.updateUser({password:first,data:{revora_invited:false,revora_password_set:true}});if(error)throw error;await enterApp(data.user,window.revoraPendingInvitedOrgId||data.user.user_metadata?.organization_id||null)}
+   catch(err){msg.textContent=err.message||'No se pudo guardar la contraseña.';msg.classList.add('error')}
+   finally{btn.disabled=false}
+ });
  $('#company-form').addEventListener('submit',async e=>{
    e.preventDefault();if(!pendingUser){message('Inicia sesión para continuar.',true);$('#company-form').hidden=true;$('#auth-form').hidden=false;return}
    const btn=$('#company-submit'),name=$('#company-name').value.trim(),msg=$('#company-message');btn.disabled=true;msg.textContent='Creando empresa…';msg.classList.remove('error');
