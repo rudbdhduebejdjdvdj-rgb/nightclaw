@@ -151,7 +151,7 @@ body:not(.authenticated) .app{display:none}.auth-shell{min-height:100vh;display:
    e.preventDefault();const email=$('#auth-email').value.trim(),password=$('#auth-password').value,submit=$('#auth-submit');submit.disabled=true;message(mode==='login'?'Iniciando sesión…':'Creando tu cuenta…');
    try{
      if(mode==='login'){const {data,error}=await client.auth.signInWithPassword({email,password});if(error)throw error;if(data.user)await enterApp(data.user)}
-     else{const {data,error}=await client.auth.signUp({email,password,options:{data:{full_name:$('#auth-name').value.trim()}}});if(error)throw error;if(data.session&&data.user){await enterApp(data.user)}else{message('Cuenta creada. Revisa tu correo para confirmar la dirección y después inicia sesión.')}}
+     else{const {data,error}=await client.auth.signUp({email,password,options:{emailRedirectTo:location.href,data:{full_name:$('#auth-name').value.trim()}}});if(error)throw error;if(data.session&&data.user){await enterApp(data.user)}else{message('Cuenta creada. Revisa tu correo para confirmar la dirección y después inicia sesión.')}}
    }catch(err){message(err.message||'Ha ocurrido un error al acceder.',true)}
    finally{submit.disabled=false}
  });
